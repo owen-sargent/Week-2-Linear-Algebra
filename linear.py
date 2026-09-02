@@ -26,17 +26,23 @@ EARTH_GRAVITY = 9.8 * u.m / u.s**2
 
 def commutator(first: Array, second: Array) -> Array:
     """Compute the matrix commutator $[A, B] = AB - BA$."""
-    raise NotImplementedError("Implement commutator")
+    return (first @ second) - (second @ first)
 
-
-def are_perpendicular(first, second, tolerance=1e-10):
+def are_perpendicular(first: Array, second: Array, tolerance=1e-10) -> bool:
     """Determine whether two vectors are perpendicular."""
-    raise NotImplementedError("Implement are_perpendicular")
+
+    AB = first @ second
+
+    return abs(AB) < tolerance 
 
 
-def are_parallel(first, second, tolerance=1e-10):
-    """Determine whether two nonzero vectors are parallel."""
-    raise NotImplementedError("Implement are_parallel")
+def are_parallel(first: Array, second: Array, tolerance=1e-10) -> bool:
+    """Determine whether two vectors are parallel."""
+
+    dot_product = first @ second
+    magnitude_product = np.linalg.norm(first) * np.linalg.norm(second)
+
+    return abs(abs(dot_product) - magnitude_product) < tolerance
 
 
 def are_commutative(first, second, tolerance=1e-10):
