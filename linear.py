@@ -62,17 +62,26 @@ def is_hermitian(matrix: Array, tolerance=1e-10) -> bool:
 
 def is_unitary(matrix: Array, tolerance=1e-10) -> bool:
     """Determine whether a matrix is unitary."""
-    raise NotImplementedError("Implement is_unitary")
+    if matrix.shape[0] != matrix.shape[1]:
+        return False  # Not a square matrix, cannot be unitary
+
+    A_H = matrix.conj().T
+    identity = np.eye(matrix.shape[0])
+    return abs(matrix @ A_H - identity).max() < tolerance
 
 
 def is_linear_operator(matrix: Array, tolerance=1e-10) -> bool:
     """Determine whether a matrix represents a linear operator."""
-    raise NotImplementedError("Implement is_linear_operator")
+    u = np.random.rand(matrix.shape[1])
+    v = np.random.rand(matrix.shape[1])
+    return abs(matrix @ (u + v) - (matrix @ u + matrix @ v)).max() < tolerance
 
 
 def projection(vector_a: Array, vector_b: Array) -> Array:
     """Project vector $\\vec{A}$ onto vector $\\vec{B}$."""
-    raise NotImplementedError("Implement projection")
+    dot_ab = vector_a @ vector_b
+    dot_bb = vector_b @ vector_b
+    return (dot_ab / dot_bb) * vector_b
 
 
 def rotate_vector(vector: Array, axis: Array, theta: float) -> Array:
