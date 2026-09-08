@@ -84,14 +84,37 @@ def projection(vector_a: Array, vector_b: Array) -> Array:
     return (dot_ab / dot_bb) * vector_b
 
 
-def rotate_vector(vector: Array, axis: Array, theta: float) -> Array:
-    """Rotate a vector through angle theta about an axis in $\\mathbb{R}^3$."""
-    raise NotImplementedError("Implement rotate_vector")
+def rotate_vector(vector: Array, axis: int, theta: float) -> Array:
+    """Rotate a vector through angle theta about an axis in R^3."""
+
+    if axis == 0:
+        k = np.array([1.0, 0.0, 0.0])
+    elif axis == 1:
+        k = np.array([0.0, 1.0, 0.0])
+    elif axis == 2:
+        k = np.array([0.0, 0.0, 1.0])
+    else:
+        raise ValueError("Axis must be 0, 1, or 2.")
+
+    v_cos = vector * np.cos(theta)
+    v_sin = np.cross(k, vector) * np.sin(theta)
+    v_dot = k * (k @ vector) * (1 - np.cos(theta))
+
+    return v_cos + v_sin + v_dot
+
 
 
 def plane_from_points(first: Array, second: Array, third: Array) -> tuple[Array, float]:
     """Find the plane through three noncollinear points."""
-    raise NotImplementedError("Implement plane_from_points")
+    if np.linalg.matrix_rank(np.vstack([first, second, third])) < 3:
+        raise ValueError("The three points must be noncollinear.")
+    u = second - first
+    v = third - first
+    normal = np.cross(u, v)
+'''
+Need to compute the offset (d) of the plane equation Ax + By + Cz + D = 0. The offset can be calculated using one of the points and the normal vector. The formula for the offset is:
+d = - (A*x0 + B*y0 + C*z0)
+'''
 
 
 def distance_point_to_plane(point: Array, normal: Array, offset: float) -> float:
