@@ -181,7 +181,7 @@ def is_linear_operator(matrix: Array, tolerance: float = 1e-10) -> bool:
     if matrix.ndim != 2:
         return False
 
-    return matrix.shape[0] == matrix.shape[1]
+    return bool(matrix.shape[0] == matrix.shape[1])
 
 
 def projection(vector_a: Array, vector_b: Array) -> Array:
