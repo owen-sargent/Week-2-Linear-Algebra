@@ -45,7 +45,7 @@ def commutator(first: Array, second: Array) -> Array:
     return (first @ second) - (second @ first)
 
 
-def are_perpendicular(first: Array, second: Array, tolerance=1e-10) -> bool:
+def are_perpendicular(first: Array, second: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether two vectors are perpendicular.
 
     Parameters
@@ -65,10 +65,10 @@ def are_perpendicular(first: Array, second: Array, tolerance=1e-10) -> bool:
 
     AB = first @ second
 
-    return abs(AB) < tolerance
+    return bool(np.abs(AB) < tolerance)
 
 
-def are_parallel(first: Array, second: Array, tolerance=1e-10) -> bool:
+def are_parallel(first: Array, second: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether two vectors are parallel.
 
     Parameters
@@ -89,10 +89,10 @@ def are_parallel(first: Array, second: Array, tolerance=1e-10) -> bool:
     dot_product = first @ second
     magnitude_product = np.linalg.norm(first) * np.linalg.norm(second)
 
-    return abs(abs(dot_product) - magnitude_product) < tolerance
+    return bool(abs(abs(dot_product) - magnitude_product) < tolerance)
 
 
-def are_commutative(first: Array, second: Array, tolerance=1e-10) -> bool:
+def are_commutative(first: Array, second: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether two matrices commute.
 
     Parameters
@@ -111,10 +111,10 @@ def are_commutative(first: Array, second: Array, tolerance=1e-10) -> bool:
     """
     AB = first @ second
     BA = second @ first
-    return abs(AB - BA).max() < tolerance
+    return bool(abs(AB - BA).max() < tolerance)
 
 
-def is_hermitian(matrix: Array, tolerance=1e-10) -> bool:
+def is_hermitian(matrix: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether a matrix is Hermitian.
 
     Parameters
@@ -130,12 +130,12 @@ def is_hermitian(matrix: Array, tolerance=1e-10) -> bool:
         True if the matrix is Hermitian, False otherwise.
     """
     if matrix.shape[0] != matrix.shape[1]:
-        return False  # Not a square matrix, cannot be Hermitian
+        raise ValueError("Matrix must be square to check for Hermiticity.")
 
-    return abs(matrix - matrix.conj().T).max() < tolerance
+    return bool(abs(matrix - matrix.conj().T).max() < tolerance)
 
 
-def is_unitary(matrix: Array, tolerance=1e-10) -> bool:
+def is_unitary(matrix: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether a matrix is unitary.
 
     Parameters
@@ -151,14 +151,14 @@ def is_unitary(matrix: Array, tolerance=1e-10) -> bool:
         True if the matrix is unitary, False otherwise.
     """
     if matrix.shape[0] != matrix.shape[1]:
-        return False  # Not a square matrix, cannot be unitary
+        raise ValueError("Matrix must be square to check for unitarity.")
 
     A_H = matrix.conj().T
     identity = np.eye(matrix.shape[0])
-    return abs(matrix @ A_H - identity).max() < tolerance
+    return bool(abs(matrix @ A_H - identity).max() < tolerance)
 
 
-def is_linear_operator(matrix: Array, tolerance=1e-10) -> bool:
+def is_linear_operator(matrix: Array, tolerance: float = 1e-10) -> bool:
     """Determine whether a matrix represents a linear operator.
 
     Parameters
@@ -175,7 +175,7 @@ def is_linear_operator(matrix: Array, tolerance=1e-10) -> bool:
     """
     u = np.random.rand(matrix.shape[1])
     v = np.random.rand(matrix.shape[1])
-    return abs(matrix @ (u + v) - (matrix @ u + matrix @ v)).max() < tolerance
+    return bool(abs(matrix @ (u + v) - (matrix @ u + matrix @ v)).max() < tolerance)
 
 
 def projection(vector_a: Array, vector_b: Array) -> Array:
@@ -229,7 +229,12 @@ def rotate_vector(vector: Array, axis: int, theta: float) -> Array:
     v_sin = np.cross(k, vector) * np.sin(theta)
     v_dot = k * (k @ vector) * (1 - np.cos(theta))
 
-    return v_cos + v_sin + v_dot
+    rotated: Array = np.asarray(
+        v_cos + v_sin + v_dot,
+        dtype=np.float64
+    )
+
+    return rotated
 
 
 def plane_from_points(first: Array, second: Array, third: Array) -> tuple[Array, float]:
@@ -249,13 +254,16 @@ def plane_from_points(first: Array, second: Array, third: Array) -> tuple[Array,
     tuple[Array, float]
         The normal vector and offset of the plane.
     """
-    if np.linalg.matrix_rank(np.vstack([first, second, third])) < 3:
-        raise ValueError("The three points must be noncollinear.")
+
     u = second - first
     v = third - first
     normal_cross = np.cross(u, v)
+
+    if np.isclose(np.linalg.norm(normal_cross), 0):
+        raise ValueError("The three points are collinear and do not define a plane.")
+
     normal = normal_cross / np.linalg.norm(normal_cross)
-    offset = normal @ first
+    offset = float(normal @ first)
     return normal, offset
 
 
@@ -277,7 +285,7 @@ def distance_point_to_plane(point: Array, normal: Array, offset: float) -> float
         The minimum distance from the point to the plane.
     """
     distance = abs(normal @ point + offset) / np.linalg.norm(normal)
-    return distance
+    return float(distance)
 
 
 def distance_between_lines(
@@ -306,29 +314,25 @@ def distance_between_lines(
     """
 
     cross = np.cross(direction1, direction2)
-
-    if np.isclose(np.linalg.norm(cross), 0):
-        difference = point2 - point1
-
-        distance = np.linalg.norm(
-            np.cross(difference, direction1)
-        ) / np.linalg.norm(direction1)
-
-        return distance
-
     difference = point2 - point1
 
-    distance = abs(difference @ cross) / np.linalg.norm(cross)
+    if np.isclose(np.linalg.norm(cross), 0):
+        return float(
+            np.linalg.norm(np.cross(difference, direction1))
+            / np.linalg.norm(direction1)
+        )
 
-    return distance
+    return float(
+        abs(difference @ cross) / np.linalg.norm(cross)
+    )
 
 
 def solve_cable_tension(
         N: int,
         L: float,
-        rho: Callable[[Array], Array],
+        rho: Callable[[Any], Any],
         g: float = EARTH_GRAVITY
-        ) -> tuple[Array, Array]:
+        ) -> tuple[Any, Any]:
     """Solve for the tension in a hanging cable discretized into N segments.
 
     Parameters
@@ -337,14 +341,14 @@ def solve_cable_tension(
         The number of segments.
     L : float
         The length of the cable.
-    rho : Callable[[Array], Array]
+    rho : Callable[[Any], Any]
         The density of the cable as a function of position.
     g : float, optional
         The acceleration due to gravity (default is EARTH_GRAVITY).
 
     Returns
     -------
-    tuple[Array, Array]
+    tuple[Any, Any]
         The positions and tensions along the cable.
     """
     delta_z = L / N
@@ -403,7 +407,7 @@ def plot_cable_tension(z: Array, T: Array, L: float) -> Any:
     segments = np.stack((points[:-1], points[1:]), axis=1)
 
     line = LineCollection(
-        segments,
+        segments.tolist(),
         cmap="inferno_r",
         array=T_values
     )
