@@ -85,6 +85,11 @@ def are_parallel(first: Array, second: Array, tolerance: float = 1e-10) -> bool:
     bool
         True if the vectors are parallel, False otherwise.
     """
+    if (
+        np.isclose(np.linalg.norm(first), 0.0)
+        or np.isclose(np.linalg.norm(second), 0.0)
+    ):
+        raise ValueError("Cannot determine parallelism for zero vectors.")
 
     dot_product = first @ second
     magnitude_product = np.linalg.norm(first) * np.linalg.norm(second)
@@ -173,9 +178,10 @@ def is_linear_operator(matrix: Array, tolerance: float = 1e-10) -> bool:
     bool
         True if the matrix represents a linear operator, False otherwise.
     """
-    u = np.random.rand(matrix.shape[1])
-    v = np.random.rand(matrix.shape[1])
-    return bool(abs(matrix @ (u + v) - (matrix @ u + matrix @ v)).max() < tolerance)
+    if matrix.ndim != 2:
+        return False
+
+    return matrix.shape[0] == matrix.shape[1]
 
 
 def projection(vector_a: Array, vector_b: Array) -> Array:
@@ -216,23 +222,22 @@ def rotate_vector(vector: Array, axis: int, theta: float) -> Array:
         The rotated vector.
     """
 
-    if axis == 0:
-        k = np.array([1.0, 0.0, 0.0])
-    elif axis == 1:
-        k = np.array([0.0, 1.0, 0.0])
-    elif axis == 2:
-        k = np.array([0.0, 0.0, 1.0])
-    else:
+    if vector.shape != (3,):
+        raise ValueError("Vector must be a 3D vector.")
+
+    if axis not in (0, 1, 2):
         raise ValueError("Axis must be 0, 1, or 2.")
 
-    v_cos = vector * np.cos(theta)
-    v_sin = np.cross(k, vector) * np.sin(theta)
-    v_dot = k * (k @ vector) * (1 - np.cos(theta))
+    rotated = vector.copy()
 
-    rotated: Array = np.asarray(
-        v_cos + v_sin + v_dot,
-        dtype=np.float64
-    )
+    indices = [i for i in range(3) if i != axis]
+    i, j = indices
+
+    c = np.cos(theta)
+    s = np.sin(theta)
+
+    rotated[i] = vector[i] * c - vector[j] * s
+    rotated[j] = vector[i] * s + vector[j] * c
 
     return rotated
 
@@ -284,7 +289,7 @@ def distance_point_to_plane(point: Array, normal: Array, offset: float) -> float
     float
         The minimum distance from the point to the plane.
     """
-    distance = abs(normal @ point + offset) / np.linalg.norm(normal)
+    distance = abs(normal @ point - offset) / np.linalg.norm(normal)
     return float(distance)
 
 
@@ -359,11 +364,15 @@ def solve_cable_tension(
 
     A = (np.diag(np.ones(N)) + np.diag(-np.ones(N - 1), k=-1))
 
-    b = rho(z_mid) * g * delta_z
+    density = np.ones(N) * rho(z_mid)
 
-    tension = np.linalg.solve(A, b.si.value)
-
-    T = tension * u.N
+    b = density * g * delta_z
+    if hasattr(b, "si"):
+        tension = np.linalg.solve(A, b.si.value)
+        T = tension * u.N
+    else:
+        tension = np.linalg.solve(A, b)
+        T = tension * u.N
 
     return z, T
 
@@ -385,7 +394,6 @@ def plot_cable_tension(z: Array, T: Array, L: float) -> Any:
     Any
         The matplotlib figure and axes.
     """
-    plt.rcParams["text.usetex"] = False
     if hasattr(z, "value"):
         z_values = z.value
     else:
@@ -428,5 +436,5 @@ def plot_cable_tension(z: Array, T: Array, L: float) -> Any:
     ax.set_title(
         f"Tension in a Hanging Cable with {len(T_values)} Segments"
     )
-    fig.savefig("cable_tension.png", dpi=150, bbox_inches="tight")
+
     return fig, ax
