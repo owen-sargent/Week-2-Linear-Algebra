@@ -89,7 +89,7 @@ def are_parallel(first: Array, second: Array, tolerance: float = 1e-10) -> bool:
         np.isclose(np.linalg.norm(first), 0.0)
         or np.isclose(np.linalg.norm(second), 0.0)
     ):
-        raise ValueError("Cannot determine parallelism for zero vectors.")
+        return False
 
     dot_product = first @ second
     magnitude_product = np.linalg.norm(first) * np.linalg.norm(second)
@@ -199,6 +199,11 @@ def projection(vector_a: Array, vector_b: Array) -> Array:
     Array
         The projection of vector_a onto vector_b.
     """
+    if (
+        np.isclose(np.linalg.norm(vector_a), 0.0)
+        or np.isclose(np.linalg.norm(vector_b), 0.0)
+    ):
+        raise ValueError("Neither vector may be the zero vector.")
     dot_ab = vector_a @ vector_b
     dot_bb = vector_b @ vector_b
     return (dot_ab / dot_bb) * vector_b
