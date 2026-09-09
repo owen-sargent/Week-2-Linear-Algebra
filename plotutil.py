@@ -33,7 +33,7 @@ mpl.rcParams.update({
 def colored_line_between_pts(
         x: npt.ArrayLike, y: npt.ArrayLike, force: npt.ArrayLike, ax: Axes,
         clabel: OptString = None, **lc_kwargs
-    ) -> Collection:
+        ) -> Collection:
     """
     Plot a line whose segments are colored by a force magnitude using the "inferno" colormap.
 
