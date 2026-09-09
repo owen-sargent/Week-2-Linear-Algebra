@@ -6,8 +6,10 @@ outputs unless the function documentation specifies otherwise.
 
 # --- Imports --- #
 # Built-in Libraries
+from matplotlib.collections import LineCollection
+from matplotlib import pyplot as plt
 from numpy.typing import NDArray
-from typing import Any
+from typing import Any, Callable
 
 # Numerical Libraries
 import numpy as np
@@ -110,32 +112,107 @@ def plane_from_points(first: Array, second: Array, third: Array) -> tuple[Array,
         raise ValueError("The three points must be noncollinear.")
     u = second - first
     v = third - first
-    normal = np.cross(u, v)
-'''
-Need to compute the offset (d) of the plane equation Ax + By + Cz + D = 0. The offset can be calculated using one of the points and the normal vector. The formula for the offset is:
-d = - (A*x0 + B*y0 + C*z0)
-'''
-
+    normal_cross = np.cross(u, v)
+    normal = normal_cross / np.linalg.norm(normal_cross)
+    offset = normal @ first
+    return normal, offset
 
 def distance_point_to_plane(point: Array, normal: Array, offset: float) -> float:
     """Find the minimum distance from a point to a plane."""
-    raise NotImplementedError("Implement distance_point_to_plane")
+    distance = abs(normal @ point + offset) / np.linalg.norm(normal)
+    return distance
 
 
 def distance_between_lines(
-        first_point: Array,
-        first_direction: Array,
-        second_point: Array,
-        second_direction: Array) -> float:
-    """Find the minimum distance between two lines in $\\mathbb{R}^3$."""
-    raise NotImplementedError("Implement distance_between_lines")
+        point1: Array,
+        direction1: Array,
+        point2: Array,
+        direction2: Array
+        ) -> float:
+    """Find the minimum distance between two lines in R^3."""
+
+    cross = np.cross(direction1, direction2)
+
+    if np.isclose(np.linalg.norm(cross), 0):
+        difference = point2 - point1
+
+        distance = np.linalg.norm(
+            np.cross(difference, direction1)
+        ) / np.linalg.norm(direction1)
+
+        return distance
+
+    difference = point2 - point1
+
+    distance = abs(difference @ cross) / np.linalg.norm(cross)
+
+    return distance
+    
 
 
-def solve_cable_tension(N: int, L: float, rho: float, g: float = EARTH_GRAVITY) -> tuple[Array, Array]:
+def solve_cable_tension(N: int, L: float, rho: Callable[[Array], Array], g: float = EARTH_GRAVITY) -> tuple[Array, Array]:
     """Solve for the tension in a hanging cable discretized into N segments."""
-    raise NotImplementedError("Implement solve_cable_tension")
+    delta_z = L / N
+
+    z = np.linspace(0.0, 1.0, N + 1) * L
+
+    z_mid = (z[:-1] + z[1:]) / 2
+
+    A = (np.diag(np.ones(N)) + np.diag(-np.ones(N - 1), k=-1))
+
+    b= rho(z_mid) * g * delta_z
+
+    tension = np.linalg.solve(A, b.si.value)
+
+    T = tension * u.N
+
+    return z, T
 
 
 def plot_cable_tension(z: Array, T: Array, L: float) -> Any:
     """Plot the tension along a hanging cable, colored by tension magnitude."""
-    raise NotImplementedError("Implement plot_cable_tension")
+    plt.rcParams["text.usetex"] = False
+    if hasattr(z, "value"):
+        z_values = z.value
+    else:
+        z_values = np.asarray(z)
+
+    if hasattr(T, "value"):
+        T_values = T.value
+    else:
+        T_values = np.asarray(T)
+
+    if hasattr(L, "value"):
+        L_value = L.value
+    else:
+        L_value = L
+
+    x = np.zeros_like(z_values)
+
+    points = np.column_stack((x, z_values))
+    segments = np.stack((points[:-1], points[1:]), axis=1)
+
+    line = LineCollection(
+        segments,
+        cmap="inferno_r",
+        array=T_values
+    )
+
+    fig, ax = plt.subplots()
+
+    ax.add_collection(line)
+
+    ax.set_xlim(-0.5, 0.5)
+    ax.set_ylim(-0.5, L_value + 0.5)
+
+    ax.set_xticks([])
+
+    cbar = fig.colorbar(line, ax=ax)
+    cbar.set_label("Tension (N)")
+
+    ax.set_ylabel("Height (m)")
+    ax.set_title(
+        f"Tension in a Hanging Cable with {len(T_values)} Segments"
+    )
+    fig.savefig("cable_tension.png", dpi=150, bbox_inches="tight")
+    return fig, ax
